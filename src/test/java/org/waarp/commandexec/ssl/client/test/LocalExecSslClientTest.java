@@ -1,32 +1,20 @@
 /**
-   This file is part of Waarp Project.
-
-   Copyright 2009, Frederic Bregier, and individual contributors by the @author
-   tags. See the COPYRIGHT.txt in the distribution for a full listing of
-   individual contributors.
-
-   All Waarp Project is free software: you can redistribute it and/or 
-   modify it under the terms of the GNU General Public License as published 
-   by the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   Waarp is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with Waarp .  If not, see <http://www.gnu.org/licenses/>.
+ * This file is part of Waarp Project.
+ * <p>
+ * Copyright 2009, Frederic Bregier, and individual contributors by the @author tags. See the COPYRIGHT.txt in the
+ * distribution for a full listing of individual contributors.
+ * <p>
+ * All Waarp Project is free software: you can redistribute it and/or modify it under the terms of the GNU General
+ * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
+ * later version.
+ * <p>
+ * Waarp is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ * <p>
+ * You should have received a copy of the GNU General Public License along with Waarp .  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 package org.waarp.commandexec.ssl.client.test;
-
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -35,7 +23,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
-
 import org.waarp.commandexec.ssl.client.LocalExecSslClientHandler;
 import org.waarp.commandexec.ssl.client.LocalExecSslClientInitializer;
 import org.waarp.commandexec.utils.LocalExecResult;
@@ -48,6 +35,14 @@ import org.waarp.common.logging.WaarpSlf4JLoggerFactory;
 import org.waarp.common.utility.DetectionUtils;
 import org.waarp.common.utility.WaarpNettyUtil;
 import org.waarp.common.utility.WaarpThreadFactory;
+
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * LocalExecSsl client.
@@ -83,15 +78,22 @@ public class LocalExecSslClientTest extends Thread {
 
     static EventLoopGroup workerGroup = new NioEventLoopGroup();
     static EventExecutorGroup executor = new DefaultEventExecutorGroup(DetectionUtils.numberThreads(),
-            new WaarpThreadFactory("LocalExecServer"));
+                                                                       new WaarpThreadFactory("LocalExecServer"));
     // Configure the client.
     static Bootstrap bootstrap;
     // Configure the pipeline factory.
     static LocalExecSslClientInitializer localExecClientInitializer;
+    private Channel channel;
+
+    /**
+     * Simple constructor
+     */
+    public LocalExecSslClientTest() {
+    }
 
     /**
      * Test & example main
-     * 
+     *
      * @param args
      *            ignored
      * @throws Exception
@@ -145,7 +147,7 @@ public class LocalExecSslClientTest extends Thread {
             long second = System.currentTimeMillis();
             // print time for one exec
             System.err.println("1=Total time in ms: " + (second - first) + " or " + (1 * 1000 / (second - first))
-                    + " exec/s");
+                               + " exec/s");
             System.err.println("Result: " + ok + ":" + ko);
             ok = 0;
             ko = 0;
@@ -161,7 +163,7 @@ public class LocalExecSslClientTest extends Thread {
             second = System.currentTimeMillis();
             // print time for one exec
             System.err.println(nit + "=Total time in ms: " + (second - first) + " or "
-                    + (nit * 1000 / (second - first)) + " exec/s");
+                               + (nit * 1000 / (second - first)) + " exec/s");
             System.err.println("Result: " + ok + ":" + ko);
             ok = 0;
             ko = 0;
@@ -183,7 +185,7 @@ public class LocalExecSslClientTest extends Thread {
 
             // print time for one exec
             System.err.println((nit * nth) + "=Total time in ms: " + (second - first) + " or "
-                    + (nit * nth * 1000 / (second - first)) + " exec/s");
+                               + (nit * nth * 1000 / (second - first)) + " exec/s");
             System.err.println("Result: " + ok + ":" + ko);
             ok = 0;
             ko = 0;
@@ -197,7 +199,7 @@ public class LocalExecSslClientTest extends Thread {
             second = System.currentTimeMillis();
             // print time for one exec
             System.err.println("1=Total time in ms: " + (second - first) + " or " + (1 * 1000 / (second - first))
-                    + " exec/s");
+                               + " exec/s");
             System.err.println("Result: " + ok + ":" + ko);
             ok = 0;
             ko = 0;
@@ -207,14 +209,6 @@ public class LocalExecSslClientTest extends Thread {
             localExecClientInitializer.releaseResources();
         }
     }
-
-    /**
-     * Simple constructor
-     */
-    public LocalExecSslClientTest() {
-    }
-
-    private Channel channel;
 
     /**
      * Run method for thread
@@ -270,7 +264,7 @@ public class LocalExecSslClientTest extends Thread {
         int status = localExecResult.getStatus();
         if (status < 0) {
             System.err.println("Status: " + status + "\nResult: " +
-                    localExecResult.getResult());
+                               localExecResult.getResult());
             ko++;
         } else {
             ok++;
@@ -292,7 +286,7 @@ public class LocalExecSslClientTest extends Thread {
         int status = localExecResult.getStatus();
         if (status < 0) {
             System.err.println("Status: " + status + "\nResult: " +
-                    localExecResult.getResult());
+                               localExecResult.getResult());
             ko++;
         } else {
             ok++;

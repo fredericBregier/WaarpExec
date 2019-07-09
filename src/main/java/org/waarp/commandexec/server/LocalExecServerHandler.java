@@ -1,24 +1,34 @@
 /**
-   This file is part of Waarp Project.
-
-   Copyright 2009, Frederic Bregier, and individual contributors by the @author
-   tags. See the COPYRIGHT.txt in the distribution for a full listing of
-   individual contributors.
-
-   All Waarp Project is free software: you can redistribute it and/or 
-   modify it under the terms of the GNU General Public License as published 
-   by the Free Software Foundation, either version 3 of the License, or
-   (at your option) any later version.
-
-   Waarp is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-
-   You should have received a copy of the GNU General Public License
-   along with Waarp .  If not, see <http://www.gnu.org/licenses/>.
+ * This file is part of Waarp Project.
+ * <p>
+ * Copyright 2009, Frederic Bregier, and individual contributors by the @author tags. See the COPYRIGHT.txt in the
+ * distribution for a full listing of individual contributors.
+ * <p>
+ * All Waarp Project is free software: you can redistribute it and/or modify it under the terms of the GNU General
+ * Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any
+ * later version.
+ * <p>
+ * Waarp is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
+ * of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+ * <p>
+ * You should have received a copy of the GNU General Public License along with Waarp .  If not, see
+ * <http://www.gnu.org/licenses/>.
  */
 package org.waarp.commandexec.server;
+
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.SimpleChannelInboundHandler;
+import org.apache.commons.exec.CommandLine;
+import org.apache.commons.exec.DefaultExecutor;
+import org.apache.commons.exec.ExecuteException;
+import org.apache.commons.exec.ExecuteWatchdog;
+import org.apache.commons.exec.PumpStreamHandler;
+import org.waarp.commandexec.utils.LocalExecDefaultResult;
+import org.waarp.common.crypto.ssl.WaarpSslUtility;
+import org.waarp.common.logging.WaarpLogger;
+import org.waarp.common.logging.WaarpLoggerFactory;
+import org.waarp.common.utility.WaarpStringUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -31,44 +41,36 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.RejectedExecutionException;
 
-import org.apache.commons.exec.CommandLine;
-import org.apache.commons.exec.DefaultExecutor;
-import org.apache.commons.exec.ExecuteException;
-import org.apache.commons.exec.ExecuteWatchdog;
-import org.apache.commons.exec.PumpStreamHandler;
-
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.SimpleChannelInboundHandler;
-
-import org.waarp.commandexec.utils.LocalExecDefaultResult;
-import org.waarp.common.crypto.ssl.WaarpSslUtility;
-import org.waarp.common.logging.WaarpLogger;
-import org.waarp.common.logging.WaarpLoggerFactory;
-import org.waarp.common.utility.WaarpStringUtils;
-
 /**
  * Handles a server-side channel for LocalExec.
  *
  *
  */
 public class LocalExecServerHandler extends SimpleChannelInboundHandler<String> {
-    // Fixed delay, but could change if necessary at construction
-    private long delay = LocalExecDefaultResult.MAXWAITPROCESS;
-    protected LocalExecServerInitializer factory = null;
-    static protected boolean isShutdown = false;
-
     /**
      * Internal Logger
      */
     private static final WaarpLogger logger = WaarpLoggerFactory
             .getLogger(LocalExecServerHandler.class);
-
+    static protected boolean isShutdown = false;
+    protected LocalExecServerInitializer factory = null;
     protected volatile boolean answered = false;
+    // Fixed delay, but could change if necessary at construction
+    private long delay = LocalExecDefaultResult.MAXWAITPROCESS;
+
+    /**
+     * Constructor with a specific delay
+     *
+     * @param newdelay
+     */
+    public LocalExecServerHandler(LocalExecServerInitializer factory, long newdelay) {
+        this.factory = factory;
+        delay = newdelay;
+    }
 
     /**
      * Is the Local Exec Server going Shutdown
-     * 
+     *
      * @param channel
      *            associated channel
      * @return True if in Shutdown
@@ -76,7 +78,7 @@ public class LocalExecServerHandler extends SimpleChannelInboundHandler<String> 
     public static boolean isShutdown(Channel channel) {
         if (isShutdown) {
             channel.writeAndFlush(LocalExecDefaultResult.ConnectionRefused.getStatus() + " "
-                    + LocalExecDefaultResult.ConnectionRefused.getResult() + "\n");
+                                  + LocalExecDefaultResult.ConnectionRefused.getResult() + "\n");
             try {
                 channel.writeAndFlush(LocalExecDefaultResult.ENDOFCOMMAND + "\n").await(30000);
             } catch (InterruptedException e) {
@@ -89,7 +91,7 @@ public class LocalExecServerHandler extends SimpleChannelInboundHandler<String> 
 
     /**
      * Print stack trace
-     * 
+     *
      * @param thread
      * @param stacks
      */
@@ -99,67 +101,6 @@ public class LocalExecServerHandler extends SimpleChannelInboundHandler<String> 
             System.err.print(stacks[i].toString() + " ");
         }
         System.err.println(stacks[stacks.length - 1].toString());
-    }
-
-    /**
-     * Shutdown thread
-     * 
-     * @author Frederic Bregier
-     *
-     */
-    private static class GGLEThreadShutdown extends Thread {
-        long delay = 3000;
-        LocalExecServerInitializer factory;
-
-        public GGLEThreadShutdown(LocalExecServerInitializer factory) {
-            this.factory = factory;
-        }
-
-        @Override
-        public void run() {
-            Timer timer = null;
-            timer = new Timer(true);
-            GGLETimerTask ggleTimerTask = new GGLETimerTask();
-            timer.schedule(ggleTimerTask, delay);
-            factory.releaseResources();
-            System.exit(0);
-        }
-
-    }
-
-    /**
-     * TimerTask to terminate the server
-     * 
-     * @author Frederic Bregier
-     *
-     */
-    private static class GGLETimerTask extends TimerTask {
-        /**
-         * Internal Logger
-         */
-        private static final WaarpLogger logger = WaarpLoggerFactory
-                .getLogger(GGLETimerTask.class);
-
-        @Override
-        public void run() {
-            logger.error("System will force EXIT");
-            Map<Thread, StackTraceElement[]> map = Thread
-                    .getAllStackTraces();
-            for (Thread thread : map.keySet()) {
-                printStackTrace(thread, map.get(thread));
-            }
-            System.exit(0);
-        }
-    }
-
-    /**
-     * Constructor with a specific delay
-     * 
-     * @param newdelay
-     */
-    public LocalExecServerHandler(LocalExecServerInitializer factory, long newdelay) {
-        this.factory = factory;
-        delay = newdelay;
     }
 
     @Override
@@ -174,7 +115,7 @@ public class LocalExecServerHandler extends SimpleChannelInboundHandler<String> 
 
     /**
      * Change the delay to the specific value. Need to be called before any receive message.
-     * 
+     *
      * @param newdelay
      */
     public void setNewDelay(long newdelay) {
@@ -189,13 +130,13 @@ public class LocalExecServerHandler extends SimpleChannelInboundHandler<String> 
         // Generate and write a response.
         String response;
         response = LocalExecDefaultResult.NoStatus.getStatus() + " " +
-                LocalExecDefaultResult.NoStatus.getResult();
+                   LocalExecDefaultResult.NoStatus.getResult();
         ExecuteWatchdog watchdog = null;
         try {
             if (request.length() == 0) {
                 // No command
                 response = LocalExecDefaultResult.NoCommand.getStatus() + " " +
-                        LocalExecDefaultResult.NoCommand.getResult();
+                           LocalExecDefaultResult.NoCommand.getResult();
             } else {
                 String[] args = request.split(" ");
                 int cpt = 0;
@@ -211,7 +152,7 @@ public class LocalExecServerHandler extends SimpleChannelInboundHandler<String> 
                     isShutdown = true;
                     logger.warn("Shutdown order received");
                     response = LocalExecDefaultResult.ShutdownOnGoing.getStatus() + " "
-                            + LocalExecDefaultResult.ShutdownOnGoing.getResult();
+                               + LocalExecDefaultResult.ShutdownOnGoing.getResult();
                     Thread thread = new GGLEThreadShutdown(factory);
                     thread.start();
                     return;
@@ -223,7 +164,7 @@ public class LocalExecServerHandler extends SimpleChannelInboundHandler<String> 
                     if (!exec.canExecute()) {
                         logger.error("Exec command is not executable: " + request);
                         response = LocalExecDefaultResult.NotExecutable.getStatus() + " " +
-                                LocalExecDefaultResult.NotExecutable.getResult();
+                                   LocalExecDefaultResult.NotExecutable.getResult();
                         return;
                     }
                 }
@@ -263,9 +204,9 @@ public class LocalExecServerHandler extends SimpleChannelInboundHandler<String> 
                             } catch (IOException e3) {
                             }
                             logger.error("Exception: " + e.getMessage() +
-                                    " Exec in error with " + commandLine.toString());
+                                         " Exec in error with " + commandLine.toString());
                             response = LocalExecDefaultResult.BadExecution.getStatus() + " " +
-                                    LocalExecDefaultResult.BadExecution.getResult();
+                                       LocalExecDefaultResult.BadExecution.getResult();
                             try {
                                 outputStream.close();
                             } catch (IOException e2) {
@@ -277,9 +218,9 @@ public class LocalExecServerHandler extends SimpleChannelInboundHandler<String> 
                             } catch (IOException e3) {
                             }
                             logger.error("Exception: " + e.getMessage() +
-                                    " Exec in error with " + commandLine.toString());
+                                         " Exec in error with " + commandLine.toString());
                             response = LocalExecDefaultResult.BadExecution.getStatus() + " " +
-                                    LocalExecDefaultResult.BadExecution.getResult();
+                                       LocalExecDefaultResult.BadExecution.getResult();
                             try {
                                 outputStream.close();
                             } catch (IOException e2) {
@@ -292,9 +233,9 @@ public class LocalExecServerHandler extends SimpleChannelInboundHandler<String> 
                         } catch (IOException e3) {
                         }
                         logger.error("Exception: " + e.getMessage() +
-                                " Exec in error with " + commandLine.toString());
+                                     " Exec in error with " + commandLine.toString());
                         response = LocalExecDefaultResult.BadExecution.getStatus() + " " +
-                                LocalExecDefaultResult.BadExecution.getResult();
+                                   LocalExecDefaultResult.BadExecution.getResult();
                         try {
                             outputStream.close();
                         } catch (IOException e2) {
@@ -307,9 +248,9 @@ public class LocalExecServerHandler extends SimpleChannelInboundHandler<String> 
                     } catch (IOException e3) {
                     }
                     logger.error("Exception: " + e.getMessage() +
-                            " Exec in error with " + commandLine.toString());
+                                 " Exec in error with " + commandLine.toString());
                     response = LocalExecDefaultResult.BadExecution.getStatus() + " " +
-                            LocalExecDefaultResult.BadExecution.getResult();
+                               LocalExecDefaultResult.BadExecution.getResult();
                     try {
                         outputStream.close();
                     } catch (IOException e2) {
@@ -321,11 +262,11 @@ public class LocalExecServerHandler extends SimpleChannelInboundHandler<String> 
                 } catch (IOException e3) {
                 }
                 if (defaultExecutor.isFailure(status) && watchdog != null &&
-                        watchdog.killedProcess()) {
+                    watchdog.killedProcess()) {
                     // kill by the watchdoc (time out)
                     logger.error("Exec is in Time Out");
                     response = LocalExecDefaultResult.TimeOutExecution.getStatus() + " " +
-                            LocalExecDefaultResult.TimeOutExecution.getResult();
+                               LocalExecDefaultResult.TimeOutExecution.getResult();
                     try {
                         outputStream.close();
                     } catch (IOException e2) {
@@ -388,6 +329,57 @@ public class LocalExecServerHandler extends SimpleChannelInboundHandler<String> 
                 }
                 WaarpSslUtility.closingSslChannel(ctx.channel());
             }
+        }
+    }
+
+    /**
+     * Shutdown thread
+     *
+     * @author Frederic Bregier
+     *
+     */
+    private static class GGLEThreadShutdown extends Thread {
+        long delay = 3000;
+        LocalExecServerInitializer factory;
+
+        public GGLEThreadShutdown(LocalExecServerInitializer factory) {
+            this.factory = factory;
+        }
+
+        @Override
+        public void run() {
+            Timer timer = null;
+            timer = new Timer(true);
+            GGLETimerTask ggleTimerTask = new GGLETimerTask();
+            timer.schedule(ggleTimerTask, delay);
+            factory.releaseResources();
+            System.exit(0);
+        }
+
+    }
+
+    /**
+     * TimerTask to terminate the server
+     *
+     * @author Frederic Bregier
+     *
+     */
+    private static class GGLETimerTask extends TimerTask {
+        /**
+         * Internal Logger
+         */
+        private static final WaarpLogger logger = WaarpLoggerFactory
+                .getLogger(GGLETimerTask.class);
+
+        @Override
+        public void run() {
+            logger.error("System will force EXIT");
+            Map<Thread, StackTraceElement[]> map = Thread
+                    .getAllStackTraces();
+            for (Thread thread : map.keySet()) {
+                printStackTrace(thread, map.get(thread));
+            }
+            System.exit(0);
         }
     }
 }
