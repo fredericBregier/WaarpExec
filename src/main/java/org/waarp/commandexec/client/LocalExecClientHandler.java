@@ -28,8 +28,6 @@ import org.waarp.common.logging.WaarpLoggerFactory;
 
 /**
  * Handles a client-side channel for LocalExec
- *
- *
  */
 public class LocalExecClientHandler extends SimpleChannelInboundHandler<String> {
 
@@ -96,11 +94,9 @@ public class LocalExecClientHandler extends SimpleChannelInboundHandler<String> 
     }
 
     /**
-     * When closed, <br>
-     * If no messaged were received => NoMessage error is set to future<br>
-     * Else if an error was detected => Set the future to error (with or without exception)<br>
-     * Else if no error occurs => Set success to the future<br>
-     *
+     * When closed, <br> If no messaged were received => NoMessage error is set to future<br> Else if an error was
+     * detected => Set the future to error (with or without exception)<br> Else if no error occurs => Set success to the
+     * future<br>
      */
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {

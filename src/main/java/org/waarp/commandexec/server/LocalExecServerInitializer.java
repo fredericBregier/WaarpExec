@@ -31,8 +31,6 @@ import org.waarp.commandexec.utils.LocalExecDefaultResult;
 
 /**
  * Creates a newly configured {@link ChannelPipeline} for a new channel for LocalExecServer.
- *
- *
  */
 public class LocalExecServerInitializer extends ChannelInitializer<SocketChannel> {
 

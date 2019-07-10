@@ -21,7 +21,6 @@ import org.waarp.commandexec.server.LocalExecServerInitializer;
 
 /**
  * @author Frederic Bregier
- *
  */
 public class LocalExecSslServerHandler extends LocalExecServerHandler {
 

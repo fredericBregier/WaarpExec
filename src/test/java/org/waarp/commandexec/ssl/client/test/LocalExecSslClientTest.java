@@ -46,14 +46,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * LocalExecSsl client.
- *
+ * <p>
  * This class is an example of client.
- *
+ * <p>
  * No client authentication On a bi-core Centrino2 vPro: 5/s in 50 sequential, 29/s in 10 threads with 50 sequential<br>
- * With client authentication On a bi-core Centrino2 vPro: 3/s in 50 sequential, 27/s in 10 threads with 50 sequential<br>
- * No client authentication On a quad-core i7: 20/s in 50 sequential, 178/s in 10 threads with 50 sequential<br>
- * With client authentication On a quad-core i7: 17/s in 50 sequential, 176/s in 10 threads with 50 sequential<br>
- *
+ * With client authentication On a bi-core Centrino2 vPro: 3/s in 50 sequential, 27/s in 10 threads with 50
+ * sequential<br> No client authentication On a quad-core i7: 20/s in 50 sequential, 178/s in 10 threads with 50
+ * sequential<br> With client authentication On a quad-core i7: 17/s in 50 sequential, 176/s in 10 threads with 50
+ * sequential<br>
  */
 public class LocalExecSslClientTest extends Thread {
 
@@ -94,8 +94,8 @@ public class LocalExecSslClientTest extends Thread {
     /**
      * Test & example main
      *
-     * @param args
-     *            ignored
+     * @param args ignored
+     *
      * @throws Exception
      */
     public static void main(String[] args) throws Exception {

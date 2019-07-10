@@ -30,9 +30,7 @@ import org.waarp.common.utility.WaarpStringUtils;
 /**
  * Version with SSL support
  *
- *
  * @author Frederic Bregier
- *
  */
 public class LocalExecSslClientInitializer extends LocalExecClientInitializer {
 

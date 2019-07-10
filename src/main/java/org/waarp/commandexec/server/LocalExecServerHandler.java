@@ -43,8 +43,6 @@ import java.util.concurrent.RejectedExecutionException;
 
 /**
  * Handles a server-side channel for LocalExec.
- *
- *
  */
 public class LocalExecServerHandler extends SimpleChannelInboundHandler<String> {
     /**
@@ -71,8 +69,8 @@ public class LocalExecServerHandler extends SimpleChannelInboundHandler<String> 
     /**
      * Is the Local Exec Server going Shutdown
      *
-     * @param channel
-     *            associated channel
+     * @param channel associated channel
+     *
      * @return True if in Shutdown
      */
     public static boolean isShutdown(Channel channel) {
@@ -336,7 +334,6 @@ public class LocalExecServerHandler extends SimpleChannelInboundHandler<String> 
      * Shutdown thread
      *
      * @author Frederic Bregier
-     *
      */
     private static class GGLEThreadShutdown extends Thread {
         long delay = 3000;
@@ -362,7 +359,6 @@ public class LocalExecServerHandler extends SimpleChannelInboundHandler<String> 
      * TimerTask to terminate the server
      *
      * @author Frederic Bregier
-     *
      */
     private static class GGLETimerTask extends TimerTask {
         /**

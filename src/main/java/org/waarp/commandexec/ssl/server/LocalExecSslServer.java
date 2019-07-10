@@ -35,7 +35,6 @@ import java.net.InetSocketAddress;
 
 /**
  * LocalExec server Main method.
- *
  */
 public class LocalExecSslServer {
 
@@ -45,16 +44,13 @@ public class LocalExecSslServer {
                                                                        new WaarpThreadFactory("LocalExecServer"));
 
     /**
-     * Takes 3 to 8 arguments (last 5 are optional arguments):<br>
-     * - mandatory arguments: filename keystorepaswwd keypassword<br>
-     * - if no more arguments are provided, it implies 127.0.0.1 + 9999 as port and no certificates<br>
-     * - optional arguments:<br>
-     * "port"<br>
-     * "port" "trustfilename" "trustpassword"<br>
-     * "port" "trustfilename" "trustpassword" "addresse"<br>
-     * "port" "trustfilename" "trustpassword" "addresse" "default delay"<br>
+     * Takes 3 to 8 arguments (last 5 are optional arguments):<br> - mandatory arguments: filename keystorepaswwd
+     * keypassword<br> - if no more arguments are provided, it implies 127.0.0.1 + 9999 as port and no certificates<br>
+     * - optional arguments:<br> "port"<br> "port" "trustfilename" "trustpassword"<br> "port" "trustfilename"
+     * "trustpassword" "addresse"<br> "port" "trustfilename" "trustpassword" "addresse" "default delay"<br>
      *
      * @param args
+     *
      * @throws Exception
      */
     public static void main(String[] args) throws Exception {

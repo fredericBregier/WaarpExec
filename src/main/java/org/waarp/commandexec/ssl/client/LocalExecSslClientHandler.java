@@ -28,7 +28,6 @@ import javax.net.ssl.SSLException;
 
 /**
  * @author Frederic Bregier
- *
  */
 public class LocalExecSslClientHandler extends LocalExecClientHandler {
     /**

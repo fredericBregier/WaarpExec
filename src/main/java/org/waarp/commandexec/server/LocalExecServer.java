@@ -34,8 +34,6 @@ import java.net.InetSocketAddress;
 
 /**
  * LocalExec server Main method.
- *
- *
  */
 public class LocalExecServer {
 
@@ -45,13 +43,11 @@ public class LocalExecServer {
                                                                        new WaarpThreadFactory("LocalExecServer"));
 
     /**
-     * Takes 3 optional arguments:<br>
-     * - no argument: implies 127.0.0.1 + 9999 port<br>
-     * - arguments:<br>
-     * "addresse" "port"<br>
-     * "addresse" "port" "default delay"<br>
+     * Takes 3 optional arguments:<br> - no argument: implies 127.0.0.1 + 9999 port<br> - arguments:<br> "addresse"
+     * "port"<br> "addresse" "port" "default delay"<br>
      *
      * @param args
+     *
      * @throws Exception
      */
     public static void main(String[] args) throws Exception {

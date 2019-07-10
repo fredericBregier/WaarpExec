@@ -20,7 +20,6 @@ package org.waarp.commandexec.utils;
  * Message Result for an Execution
  *
  * @author Frederic Bregier
- *
  */
 public class LocalExecResult {
     private int status;

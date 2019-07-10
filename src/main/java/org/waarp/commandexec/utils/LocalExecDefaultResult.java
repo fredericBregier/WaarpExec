@@ -20,7 +20,6 @@ package org.waarp.commandexec.utils;
  * Default message for LocalExec
  *
  * @author Frederic Bregier
- *
  */
 public class LocalExecDefaultResult {
     public static final LocalExecResult NoCommand = new LocalExecResult(false, -1, null, "No Command");

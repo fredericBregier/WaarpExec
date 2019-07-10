@@ -32,7 +32,6 @@ import org.waarp.common.crypto.ssl.WaarpSslContextFactory;
  * Version with SSL support
  *
  * @author Frederic Bregier
- *
  */
 public class LocalExecSslServerInitializer extends LocalExecServerInitializer {
 

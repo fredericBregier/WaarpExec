@@ -31,9 +31,6 @@ import org.waarp.common.utility.WaarpStringUtils;
 
 /**
  * Creates a newly configured {@link ChannelPipeline} for a new channel for LocalExecClientTest.
- *
- *
- *
  */
 public class LocalExecClientInitializer extends ChannelInitializer<SocketChannel> {
 

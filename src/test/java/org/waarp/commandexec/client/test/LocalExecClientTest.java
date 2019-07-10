@@ -40,11 +40,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * LocalExec client.
- *
+ * <p>
  * This class is an example of client.
- *
- * On a bi-core Centrino2 vPro: 18/s in 50 sequential, 30/s in 10 threads with 50 sequential<br>
- * On a quad-core i7: 29/s in 50 sequential, 187/s in 10 threads with 50 sequential
+ * <p>
+ * On a bi-core Centrino2 vPro: 18/s in 50 sequential, 30/s in 10 threads with 50 sequential<br> On a quad-core i7: 29/s
+ * in 50 sequential, 187/s in 10 threads with 50 sequential
  */
 public class LocalExecClientTest extends Thread {
 
@@ -75,8 +75,8 @@ public class LocalExecClientTest extends Thread {
     /**
      * Test & example main
      *
-     * @param args
-     *            ignored
+     * @param args ignored
+     *
      * @throws Exception
      */
     public static void main(String[] aregs) throws Exception {
