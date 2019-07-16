@@ -31,6 +31,7 @@ import org.waarp.commandexec.utils.LocalExecDefaultResult;
 import org.waarp.common.crypto.ssl.WaarpSslUtility;
 import org.waarp.common.logging.WaarpLogger;
 import org.waarp.common.logging.WaarpLoggerFactory;
+import org.waarp.common.utility.DetectionUtils;
 import org.waarp.common.utility.WaarpStringUtils;
 
 import java.io.ByteArrayOutputStream;
@@ -54,7 +55,7 @@ public class LocalExecServerHandler
    */
   private static final WaarpLogger logger = WaarpLoggerFactory
       .getLogger(LocalExecServerHandler.class);
-  static protected boolean isShutdown = false;
+  protected static boolean isShutdown = false;
   protected LocalExecServerInitializer factory = null;
   protected volatile boolean answered = false;
   // Fixed delay, but could change if necessary at construction
@@ -77,7 +78,7 @@ public class LocalExecServerHandler
    * @param thread
    * @param stacks
    */
-  static private void printStackTrace(Thread thread,
+  private static void printStackTrace(Thread thread,
                                       StackTraceElement[] stacks) {
     System.err.print(thread.toString() + " : ");
     for (int i = 0; i < stacks.length - 1; i++) {
@@ -163,6 +164,9 @@ public class LocalExecServerHandler
                      + LocalExecDefaultResult.ShutdownOnGoing.getResult();
           Thread thread = new GGLEThreadShutdown(factory);
           thread.start();
+          if (DetectionUtils.isJunit()) {
+            isShutdown = false;
+          }
           return;
         }
         String binary = args[cpt++];
@@ -364,7 +368,7 @@ public class LocalExecServerHandler
       GGLETimerTask ggleTimerTask = new GGLETimerTask();
       timer.schedule(ggleTimerTask, delay);
       factory.releaseResources();
-      System.exit(0);
+      DetectionUtils.SystemExit(0);
     }
 
   }
@@ -383,13 +387,15 @@ public class LocalExecServerHandler
 
     @Override
     public void run() {
-      logger.error("System will force EXIT");
-      Map<Thread, StackTraceElement[]> map = Thread
-          .getAllStackTraces();
-      for (Thread thread : map.keySet()) {
-        printStackTrace(thread, map.get(thread));
+      if (!DetectionUtils.isJunit()) {
+        logger.error("System will force EXIT");
+        Map<Thread, StackTraceElement[]> map = Thread
+            .getAllStackTraces();
+        for (Thread thread : map.keySet()) {
+          printStackTrace(thread, map.get(thread));
+        }
+        DetectionUtils.SystemExit(0);
       }
-      System.exit(0);
     }
   }
 }

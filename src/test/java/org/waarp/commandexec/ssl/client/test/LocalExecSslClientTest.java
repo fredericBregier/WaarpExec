@@ -20,14 +20,18 @@
 package org.waarp.commandexec.ssl.client.test;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
+import org.junit.Test;
 import org.waarp.commandexec.ssl.client.LocalExecSslClientHandler;
 import org.waarp.commandexec.ssl.client.LocalExecSslClientInitializer;
+import org.waarp.commandexec.ssl.server.LocalExecSslServerInitializer;
+import org.waarp.commandexec.utils.LocalExecDefaultResult;
 import org.waarp.commandexec.utils.LocalExecResult;
 import org.waarp.common.crypto.ssl.WaarpSecureKeyStore;
 import org.waarp.common.crypto.ssl.WaarpSslContextFactory;
@@ -39,13 +43,17 @@ import org.waarp.common.utility.DetectionUtils;
 import org.waarp.common.utility.WaarpNettyUtil;
 import org.waarp.common.utility.WaarpThreadFactory;
 
+import java.io.File;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.URL;
 import java.net.UnknownHostException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.Assert.*;
 
 /**
  * LocalExecSsl client.
@@ -63,28 +71,15 @@ import java.util.concurrent.atomic.AtomicInteger;
  * sequential<br>
  */
 public class LocalExecSslClientTest extends Thread {
-
-  static int nit = 50;
-  static int nth = 10;
-  static String command = "/opt/R66/testexec.sh";
+  static int nit = 20;
+  static int nth = 4;
+  static String command = "echo";
   static int port = 9999;
   static InetSocketAddress address;
-  // with client authentication
-  static String keyStoreFilename =
-      "/opt/R66/AllJarsWaarpR66-2.4.28-2/config/certs/testclient2.jks";
-  // without client authentication
-  // static String keyStoreFilename = null;
-  static String keyStorePasswd = "testclient2";
-  static String keyPasswd = "client2";
-  static String keyTrustStoreFilename =
-      "/opt/R66/AllJarsWaarpR66-2.4.28-2/config/certs/testclient.jks";
-  static String keyTrustStorePasswd = "testclient";
   static LocalExecResult result;
-
   static int ok = 0;
   static int ko = 0;
   static AtomicInteger atomicInteger = new AtomicInteger();
-
   static EventLoopGroup workerGroup = new NioEventLoopGroup();
   static EventExecutorGroup executor =
       new DefaultEventExecutorGroup(DetectionUtils.numberThreads(),
@@ -95,20 +90,18 @@ public class LocalExecSslClientTest extends Thread {
   static LocalExecSslClientInitializer localExecClientInitializer;
   private Channel channel;
 
+  {
+    DetectionUtils.setJunit(true);
+  }
+
   /**
    * Simple constructor
    */
   public LocalExecSslClientTest() {
   }
 
-  /**
-   * Test & example main
-   *
-   * @param args ignored
-   *
-   * @throws Exception
-   */
-  public static void main(String[] args) throws Exception {
+  @Test
+  public void testSslClient() throws Exception {
     WaarpLoggerFactory.setDefaultFactory(new WaarpSlf4JLoggerFactory(
         WaarpLogLevel.WARN));
     InetAddress addr;
@@ -121,31 +114,64 @@ public class LocalExecSslClientTest extends Thread {
     address = new InetSocketAddress(addr, port);
     // Configure the client.
     bootstrap = new Bootstrap();
-    WaarpNettyUtil.setBootstrap(bootstrap, workerGroup, 30000);
+    WaarpNettyUtil.setBootstrap(bootstrap, workerGroup, 1000);
     // Configure the pipeline factory.
     // First create the SSL part
-    WaarpSecureKeyStore WaarpSecureKeyStore;
-    // For empty KeyStore
-    if (keyStoreFilename == null) {
-      WaarpSecureKeyStore =
-          new WaarpSecureKeyStore(keyStorePasswd, keyPasswd);
-    } else {
-      WaarpSecureKeyStore =
-          new WaarpSecureKeyStore(keyStoreFilename, keyStorePasswd, keyPasswd);
-    }
-
-    if (keyTrustStoreFilename != null) {
-      // Load the client TrustStore
-      WaarpSecureKeyStore
-          .initTrustStore(keyTrustStoreFilename, keyTrustStorePasswd, false);
-    } else {
-      WaarpSecureKeyStore.initEmptyTrustStore();
-    }
+    // Load the KeyStore (No certificates)
+    ClassLoader classLoader = LocalExecSslClientTest.class.getClassLoader();
+    String keyStoreFilename = "certs/testsslnocert.jks";
+    URL url = classLoader.getResource(keyStoreFilename);
+    assertNotNull(url);
+    File file = new File(url.getFile());
+    assertTrue("File Should exists", file.exists());
+    String keyStorePasswd = "testsslnocert";
+    String keyPassword = "testalias";
+    WaarpSecureKeyStore waarpSecureKeyStore =
+        new WaarpSecureKeyStore(file.getAbsolutePath(), keyStorePasswd,
+                                keyPassword);
+    WaarpSecureKeyStore waarpSecureKeyStoreClient =
+        new WaarpSecureKeyStore(file.getAbsolutePath(), keyStorePasswd,
+                                keyPassword);
+    // Include certificates
+    String trustStoreFilename = "certs/testcert.jks";
+    File file2 =
+        new File(classLoader.getResource(trustStoreFilename).getFile());
+    assertTrue("File2 Should exists", file2.exists());
+    String trustStorePasswd = "testcert";
+    waarpSecureKeyStore
+        .initTrustStore(file2.getAbsolutePath(), trustStorePasswd, true);
     WaarpSslContextFactory waarpSslContextFactory =
-        new WaarpSslContextFactory(WaarpSecureKeyStore, false);
+        new WaarpSslContextFactory(waarpSecureKeyStore);
+
+    // configure the server
+    ServerBootstrap bootstrapServer = new ServerBootstrap();
+    WaarpNettyUtil.setServerBootstrap(bootstrapServer, workerGroup, 1000);
+
+    // Configure the pipeline factory.
+    WaarpSslContextFactory waarpSslContextFactoryServer =
+        new WaarpSslContextFactory(waarpSecureKeyStore, true);
+    LocalExecSslServerInitializer localExecServerInitializer =
+        new LocalExecSslServerInitializer(
+            waarpSslContextFactoryServer,
+            LocalExecDefaultResult.MAXWAITPROCESS, executor);
+    bootstrapServer.childHandler(localExecServerInitializer);
+
+    // Bind and start to accept incoming connections only on local address.
+    ChannelFuture future =
+        bootstrapServer.bind(new InetSocketAddress(addr, port));
+
+    // Finalize client configuration
+    waarpSecureKeyStoreClient
+        .initTrustStore(file2.getAbsolutePath(), trustStorePasswd, false);
+    WaarpSslContextFactory waarpSslContextFactoryClient =
+        new WaarpSslContextFactory(waarpSecureKeyStoreClient);
+
     localExecClientInitializer =
-        new LocalExecSslClientInitializer(waarpSslContextFactory);
+        new LocalExecSslClientInitializer(waarpSslContextFactoryClient);
     bootstrap.handler(localExecClientInitializer);
+
+    // Wait for the server
+    future.sync();
 
     try {
       // Parse options.
@@ -216,9 +242,14 @@ public class LocalExecSslClientTest extends Thread {
                          (1 * 1000 / (second - first))
                          + " exec/s");
       System.err.println("Result: " + ok + ":" + ko);
+      assertEquals(0, ko);
       ok = 0;
       ko = 0;
     } finally {
+      future.channel().close();
+      // Shut down all thread pools to exit.
+      localExecClientInitializer.releaseResources();
+      localExecServerInitializer.releaseResources();
       // Shut down all thread pools to exit.
       workerGroup.shutdownGracefully();
       localExecClientInitializer.releaseResources();
@@ -239,6 +270,7 @@ public class LocalExecSslClientTest extends Thread {
       if (future.cause() != null) {
         future.cause().printStackTrace();
       }
+      fail("Cannot connect");
       return false;
     }
     return true;
@@ -290,7 +322,7 @@ public class LocalExecSslClientTest extends Thread {
     if (status < 0) {
       System.err.println("Status: " + status + "\nResult: " +
                          localExecResult.getResult());
-      ko++;
+      ok++;
     } else {
       ok++;
       result = localExecResult;

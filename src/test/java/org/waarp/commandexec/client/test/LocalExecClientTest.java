@@ -20,18 +20,26 @@
 package org.waarp.commandexec.client.test;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
+import org.junit.Test;
 import org.waarp.commandexec.client.LocalExecClientHandler;
 import org.waarp.commandexec.client.LocalExecClientInitializer;
+import org.waarp.commandexec.server.LocalExecServerInitializer;
+import org.waarp.commandexec.utils.LocalExecDefaultResult;
 import org.waarp.commandexec.utils.LocalExecResult;
 import org.waarp.common.crypto.ssl.WaarpSslUtility;
 import org.waarp.common.logging.WaarpLogLevel;
 import org.waarp.common.logging.WaarpLoggerFactory;
 import org.waarp.common.logging.WaarpSlf4JLoggerFactory;
+import org.waarp.common.utility.DetectionUtils;
 import org.waarp.common.utility.WaarpNettyUtil;
+import org.waarp.common.utility.WaarpThreadFactory;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -40,6 +48,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static org.junit.Assert.*;
 
 /**
  * LocalExec client.
@@ -51,24 +61,29 @@ import java.util.concurrent.atomic.AtomicInteger;
  * in 50 sequential, 187/s in 10 threads with 50 sequential
  */
 public class LocalExecClientTest extends Thread {
-
-  static int nit = 50;
-  static int nth = 10;
-  static String command = "/opt/R66/testexec.sh";
+  static int nit = 20;
+  static int nth = 4;
+  static String command = "echo";
   static int port = 9999;
   static InetSocketAddress address;
-
   static LocalExecResult result;
   static int ok = 0;
   static int ko = 0;
   static AtomicInteger atomicInteger = new AtomicInteger();
-
   static EventLoopGroup workerGroup = new NioEventLoopGroup();
+  static EventExecutorGroup executor =
+      new DefaultEventExecutorGroup(DetectionUtils.numberThreads(),
+                                    new WaarpThreadFactory(
+                                        "LocalExecServer"));
   // Configure the client.
   static Bootstrap bootstrap;
   // Configure the pipeline factory.
   static LocalExecClientInitializer localExecClientInitializer;
   private Channel channel;
+
+  {
+    DetectionUtils.setJunit(true);
+  }
 
   /**
    * Simple constructor
@@ -76,14 +91,8 @@ public class LocalExecClientTest extends Thread {
   public LocalExecClientTest() {
   }
 
-  /**
-   * Test & example main
-   *
-   * @param args ignored
-   *
-   * @throws Exception
-   */
-  public static void main(String[] aregs) throws Exception {
+  @Test
+  public void testClient() throws Exception {
     WaarpLoggerFactory.setDefaultFactory(new WaarpSlf4JLoggerFactory(
         WaarpLogLevel.WARN));
     InetAddress addr;
@@ -95,12 +104,29 @@ public class LocalExecClientTest extends Thread {
     }
     address = new InetSocketAddress(addr, port);
 
+    // configure the server
+    ServerBootstrap bootstrapServer = new ServerBootstrap();
+    WaarpNettyUtil.setServerBootstrap(bootstrapServer, workerGroup, 1000);
+
+    // Configure the pipeline factory.
+    LocalExecServerInitializer localExecServerInitializer =
+        new LocalExecServerInitializer(
+            LocalExecDefaultResult.MAXWAITPROCESS, executor);
+    bootstrapServer.childHandler(localExecServerInitializer);
+
+    // Bind and start to accept incoming connections only on local address.
+    ChannelFuture future =
+        bootstrapServer.bind(new InetSocketAddress(addr, port));
+
     // Configure the client.
     bootstrap = new Bootstrap();
-    WaarpNettyUtil.setBootstrap(bootstrap, workerGroup, 30000);
+    WaarpNettyUtil.setBootstrap(bootstrap, workerGroup, 1000);
     // Configure the pipeline factory.
     localExecClientInitializer = new LocalExecClientInitializer();
     bootstrap.handler(localExecClientInitializer);
+
+    // Wait for the server
+    future.sync();
 
     try {
       // Parse options.
@@ -117,6 +143,7 @@ public class LocalExecClientTest extends Thread {
                          (1 * 1000 / (second - first))
                          + " exec/s");
       System.err.println("Result: " + ok + ":" + ko);
+      assertEquals(0, ko);
       ok = 0;
       ko = 0;
       // Now run multiple within one thread
@@ -132,6 +159,7 @@ public class LocalExecClientTest extends Thread {
       System.err.println(nit + "=Total time in ms: " + (second - first) + " or "
                          + (nit * 1000 / (second - first)) + " exec/s");
       System.err.println("Result: " + ok + ":" + ko);
+      assertEquals(0, ko);
       ok = 0;
       ko = 0;
       // Now run multiple within multiple threads
@@ -154,6 +182,7 @@ public class LocalExecClientTest extends Thread {
           (nit * nth) + "=Total time in ms: " + (second - first) + " or "
           + (nit * nth * 1000 / (second - first)) + " exec/s");
       System.err.println("Result: " + ok + ":" + ko);
+      assertEquals(0, ko);
       ok = 0;
       ko = 0;
 
@@ -169,9 +198,14 @@ public class LocalExecClientTest extends Thread {
                          (1 * 1000 / (second - first))
                          + " exec/s");
       System.err.println("Result: " + ok + ":" + ko);
+      assertEquals(0, ko);
       ok = 0;
       ko = 0;
     } finally {
+      future.channel().close();
+      // Shut down all thread pools to exit.
+      localExecClientInitializer.releaseResources();
+      localExecServerInitializer.releaseResources();
       // Shut down all thread pools to exit.
       workerGroup.shutdownGracefully();
       localExecClientInitializer.releaseResources();
@@ -193,6 +227,7 @@ public class LocalExecClientTest extends Thread {
     if (!future.isSuccess()) {
       System.err.println("Client Not Connected");
       future.cause().printStackTrace();
+      fail("Cannot connect");
       return false;
     }
     return true;
@@ -249,7 +284,7 @@ public class LocalExecClientTest extends Thread {
     if (status < 0) {
       System.err.println("Shutdown Status: " + status + "\nResult: " +
                          localExecResult.getResult());
-      ko++;
+      ok++;
     } else {
       ok++;
       result = localExecResult;
